@@ -1,25 +1,27 @@
 const express = require('express');
 const Gun = require('gun');
 const { ExpressPeerServer } = require('peer');
+const http = require('http');
 
 const app = express();
 const port = process.env.PORT || 8765;
 
-// 1. Start the Express HTTP server
-const server = app.listen(port, () => {
-  console.log('Unified Server listening on port', port);
-});
+// Create a native HTTP server to handle the upgrades manually
+const server = http.createServer(app);
 
-// 2. Initialize PeerJS and mount it to the '/peerjs' route
+// 1. Initialize PeerJS
 const peerServer = ExpressPeerServer(server, {
-  path: '/', // This resolves to /peerjs/ because of the app.use below
+  path: '/',
   allow_discovery: true
 });
 app.use('/peerjs', peerServer);
 
-// 3. Initialize Gun.js on the same HTTP server
-// Gun automatically intercepts WebSocket requests to /gun
+// 2. Initialize Gun
+// We explicitly tell Gun to use the same server
 const gun = Gun({ web: server });
 
-console.log('--> Gun.js relay running at /gun');
-console.log('--> PeerJS broker running at /peerjs');
+server.listen(port, () => {
+  console.log('Unified Server listening on port', port);
+  console.log('Gun Relay: /gun');
+  console.log('PeerJS Broker: /peerjs');
+});
